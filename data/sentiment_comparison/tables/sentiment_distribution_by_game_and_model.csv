@@ -1,0 +1,13 @@
+gameLabel,sentiment,count,percentage,model
+BanG Dream,Positive,2868,22.15,RoBERTa
+BanG Dream,Neutral,8170,63.1,RoBERTa
+BanG Dream,Negative,1910,14.75,RoBERTa
+BanG Dream,Positive,3526,27.23,VADER
+BanG Dream,Neutral,8018,61.92,VADER
+BanG Dream,Negative,1404,10.84,VADER
+Project Sekai,Positive,3109,23.55,RoBERTa
+Project Sekai,Neutral,6450,48.85,RoBERTa
+Project Sekai,Negative,3644,27.6,RoBERTa
+Project Sekai,Positive,5215,39.5,VADER
+Project Sekai,Neutral,5531,41.89,VADER
+Project Sekai,Negative,2457,18.61,VADER

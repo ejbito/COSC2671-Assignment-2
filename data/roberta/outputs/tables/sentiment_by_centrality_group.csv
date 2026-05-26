@@ -1,0 +1,5 @@
+gameLabel,centrality_group,Negative,Neutral,Positive,comments,positive_pct,neutral_pct,negative_pct
+BanG Dream,High centrality,358.0,1115.0,422.0,1895.0,22.27,58.84,18.89
+BanG Dream,Peripheral,668.0,2524.0,816.0,4008.0,20.36,62.97,16.67
+Project Sekai,High centrality,533.0,1015.0,551.0,2099.0,26.25,48.36,25.39
+Project Sekai,Peripheral,1188.0,2380.0,1046.0,4614.0,22.67,51.58,25.75

@@ -1,0 +1,4 @@
+VADER,Positive,Neutral,Negative
+Positive,4120,3027,1594
+Neutral,1530,10502,1517
+Negative,327,1091,2443

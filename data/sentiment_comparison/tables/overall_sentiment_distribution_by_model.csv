@@ -1,0 +1,7 @@
+sentiment,count,percentage,model
+Positive,5977,22.86,RoBERTa
+Neutral,14620,55.91,RoBERTa
+Negative,5554,21.24,RoBERTa
+Positive,8741,33.43,VADER
+Neutral,13549,51.81,VADER
+Negative,3861,14.76,VADER

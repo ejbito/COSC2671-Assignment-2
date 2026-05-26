@@ -1,0 +1,3 @@
+game,nodes,edges,density,components,largest_component_size,average_degree,clustering,reciprocity,communities,modularity
+BanG Dream,2651,2582,0.000368,274,1933,1.9479,0.000948,0.0,305,0.920611
+Project Sekai,3504,3372,0.000275,369,2364,1.9235,0.00126,0.001186,407,0.941378
