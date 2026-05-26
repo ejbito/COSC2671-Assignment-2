@@ -1,0 +1,10 @@
+﻿google-api-python-client
+matplotlib
+networkx
+nltk
+numpy
+pandas
+scikit-learn
+tqdm
+torch
+transformers
