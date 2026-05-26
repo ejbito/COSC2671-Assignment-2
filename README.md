@@ -1,18 +1,21 @@
-# COSC2671 Assignment 2 - Comparative Network and Sentiment Analysis Pipeline
+# COSC2671 Assignment 2 - YouTube Network and Sentiment Analysis
 
-This project performs a comparative sentiment and network analysis of YouTube fandom communities for **Project Sekai** and **BanG Dream / Bandori** using the YouTube Data API v3.
+This project compares two major rhythm game communities on YouTube:
 
-The analysis pipeline collects YouTube videos, comments, and replies, preprocesses the data, performs sentiment analysis, constructs reply interaction networks, computes graph metrics, and generates comparative tables and visualisations for the final report.
+- Project Sekai
+- BanG Dream / Bandori
 
-## Pipeline Overview
+The analysis combines comment sentiment analysis with reply-network analysis. The main research question is:
 
-The implementation is split into five stages:
+```text
+How do interaction network structures and sentiment patterns differ between two major rhythm game communities on YouTube?
+```
 
-1. **Data Collection**: collect YouTube videos, comments, replies, author IDs, and reply relationships.
-2. **Data Preprocessing**: flatten and clean raw JSON into analysis-ready CSV files.
-3. **Sentiment Analysis**: apply either VADER or RoBERTa sentiment analysis to cleaned comments.
-4. **Network Analysis**: construct directed reply networks, detect communities, and compute network metrics.
-5. **Combined Analysis and Visualisation**: merge sentiment and network outputs into final comparative tables and figures.
+## Python Version
+
+Use **Python 3.12** for this project.
+
+Python 3.14 may run the VADER pipeline, but RoBERTa depends on PyTorch, and PyTorch can fail to load native DLLs under unsupported or newer Python versions. The tested/recommended setup is a Python 3.12 virtual environment.
 
 ## Project Structure
 
@@ -21,16 +24,24 @@ analysis/
 |-- 01_preprocess.py
 |-- 02_sentiment_analysis.py
 |-- 03_network_analysis.py
-`-- 04_combined_analysis.py
+|-- 04_combined_analysis.py
+`-- sentiment_comparison.py
+
+cache/
+|-- vader_sentiment_cache.pkl
+`-- roberta_sentiment_cache.pkl
 
 data/
 |-- raw/
 |-- vader/
 |   |-- processed/
 |   `-- outputs/
-`-- roberta/
-    |-- processed/
-    `-- outputs/
+|-- roberta/
+|   |-- processed/
+|   `-- outputs/
+`-- sentiment_comparison/
+    |-- tables/
+    `-- figures/
 
 src/
 |-- __init__.py
@@ -39,38 +50,53 @@ src/
 `-- youtubeClient.py
 
 pipeline.py
-README.md
 requirements.txt
+README.md
 ```
 
-## Setup
+## Environment Setup
+
+Create a Python 3.12 virtual environment:
+
+```powershell
+py -3.12 -m venv venv
+```
+
+If PowerShell blocks activation, allow scripts for the current terminal session only:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Activate the environment:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Check the Python version:
+
+```powershell
+python --version
+```
 
 Install dependencies:
 
-```bash
+```powershell
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-Install the NLTK VADER lexicon once:
-
-```bash
 python -m nltk.downloader vader_lexicon
 ```
 
-RoBERTa requires `torch` and `transformers`. The first RoBERTa run downloads the model `cardiffnlp/twitter-roberta-base-sentiment-latest`, so it needs internet access and can be much slower than VADER.
+If PyTorch fails with a `torch_python.dll` error, reinstall the CPU wheel:
 
-On Windows, use Python 3.11 or 3.12 for RoBERTa if PyTorch fails to load under a newer Python version. A PyTorch DLL error such as `torch_python.dll` failing to load usually means the Python/PyTorch combination is not usable in that environment.
-
-Sentiment labels are cached in the project-level cache directory:
-
-```text
-cache/vader_sentiment_cache.pkl
-cache/roberta_sentiment_cache.pkl
+```powershell
+python -m pip uninstall -y torch torchvision torchaudio
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -c "import torch; print(torch.__version__)"
 ```
 
-RoBERTa writes to its cache after each batch, so rerunning the pipeline resumes from already labelled comments. If CUDA is available, the RoBERTa pipeline automatically uses GPU; otherwise it uses CPU.
-
-## Environment Setup
+## YouTube API Key
 
 Before collecting data, set your YouTube API key as an environment variable.
 
@@ -80,134 +106,122 @@ PowerShell:
 $env:YOUTUBE_API_KEY = "your_api_key_here"
 ```
 
-Command Prompt:
+Do not include API keys, access tokens, or credentials in submitted files.
 
-```cmd
-set YOUTUBE_API_KEY=your_api_key_here
-```
+## Data Collection
 
-macOS / Linux:
+Collect raw YouTube data:
 
-```bash
-export YOUTUBE_API_KEY="your_api_key_here"
-```
-
-Do not include API keys, tokens, or credentials in submitted files.
-
-## Run Order
-
-Collect raw data:
-
-```bash
+```powershell
 python -m src.fetchYoutubeData
 ```
 
-Run the analysis with VADER, which is the default:
+This creates:
 
-```bash
+```text
+data/raw/project_sekai_raw.json
+data/raw/bandori_raw.json
+```
+
+You do not need to recollect data when switching between VADER and RoBERTa. Both sentiment methods use the same raw data.
+
+## Run Analysis
+
+Default run uses VADER:
+
+```powershell
 python pipeline.py
 ```
 
 Explicit VADER run:
 
-```bash
+```powershell
 python pipeline.py --vader
 ```
 
 RoBERTa run:
 
-```bash
+```powershell
 python pipeline.py --roberta
 ```
 
-The selected sentiment method controls the whole output directory:
+Output directories are separated by sentiment method:
 
 ```text
 python pipeline.py --vader    -> data/vader/
 python pipeline.py --roberta  -> data/roberta/
 ```
 
-Raw data stays shared in `data/raw/`.
+## Sentiment Caching
 
-Compare VADER and RoBERTa after both pipelines have completed:
+Sentiment model outputs are cached as pickle files:
 
-```bash
+```text
+cache/vader_sentiment_cache.pkl
+cache/roberta_sentiment_cache.pkl
+```
+
+The cache is used only by `analysis/02_sentiment_analysis.py`. Later scripts read the scored CSV outputs from `data/vader/processed/` or `data/roberta/processed/`.
+
+RoBERTa writes to the cache after each batch. If a run is interrupted, rerun:
+
+```powershell
+python pipeline.py --roberta
+```
+
+Already labelled comments will be skipped.
+
+If CUDA is available, RoBERTa automatically uses GPU. Otherwise it uses CPU.
+
+## Compare VADER and RoBERTa
+
+After both pipelines complete:
+
+```powershell
 python analysis/sentiment_comparison.py
 ```
 
-This writes comparison outputs to:
+This reads:
 
 ```text
-data/sentiment_comparison/
+data/vader/processed/combined_comments_with_network.csv
+data/roberta/processed/combined_comments_with_network.csv
 ```
 
-## Expected Inputs
+and writes:
 
-Raw data should be stored in:
+```text
+data/sentiment_comparison/tables/
+data/sentiment_comparison/figures/
+```
 
-- `data/raw/project_sekai_raw.json`
-- `data/raw/bandori_raw.json`
+The comparison script produces distribution plots, model agreement tables, a VADER vs RoBERTa heatmap, monthly trend lines, and disagreement examples.
 
-## Expected Outputs
+## Main Outputs
 
-For VADER:
+For each method:
 
-- `data/vader/processed/combined_comments_clean.csv`
-- `data/vader/processed/combined_edges.csv`
-- `data/vader/processed/combined_comments_with_network.csv`
-- `data/vader/outputs/tables/*.csv`
-- `data/vader/outputs/figures/*.png`
-- `data/vader/outputs/graphs/*.gexf`
+```text
+data/<method>/processed/combined_comments_clean.csv
+data/<method>/processed/combined_edges.csv
+data/<method>/processed/combined_comments_with_network.csv
+data/<method>/outputs/tables/
+data/<method>/outputs/figures/
+data/<method>/outputs/graphs/
+```
 
-For RoBERTa:
+where `<method>` is either:
 
-- `data/roberta/processed/combined_comments_clean.csv`
-- `data/roberta/processed/combined_edges.csv`
-- `data/roberta/processed/combined_comments_with_network.csv`
-- `data/roberta/outputs/tables/*.csv`
-- `data/roberta/outputs/figures/*.png`
-- `data/roberta/outputs/graphs/*.gexf`
+```text
+vader
+roberta
+```
 
-For VADER vs RoBERTa comparison:
+## Network Construction
 
-- `data/sentiment_comparison/tables/*.csv`
-- `data/sentiment_comparison/figures/*.png`
-
-## Network Construction Notes
-
-- **Node:** unique `authorChannelId`
-- **Edge:** a reply from user A to user B
+- **Node:** YouTube user, represented by `authorChannelId`
+- **Edge:** reply author -> parent comment author
 - **Direction:** A -> B means user A replied to user B
-- **Weight:** number of repeated replies between the same pair of users
+- **Weight:** number of replies from A to B
 
-The reply network is directed and weighted.
-
-## Reproducibility Notes
-
-- YouTube API quota limits may affect data collection.
-- Running the collector multiple times may return slightly different videos depending on search ranking.
-- Search results depend on the configured query lists.
-- VADER and RoBERTa outputs are written separately so they can be compared in the report.
-- Analysis scripts assume raw data has been collected successfully before execution.
-
-## Dependencies
-
-Required packages:
-
-- google-api-python-client
-- matplotlib
-- networkx
-- nltk
-- numpy
-- pandas
-- scikit-learn
-- torch
-- tqdm
-- transformers
-
-## Submission Notes
-
-- API keys are not included.
-- Full datasets may not be included due to size limits.
-- Representative sample data may be provided separately.
-- Figures and tables generated by the pipeline correspond to outputs used in the final report.
+The reply network is directed and weighted. Community detection and connected-component analysis use an undirected version of the reply network.
