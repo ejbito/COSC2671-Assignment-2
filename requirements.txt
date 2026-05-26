@@ -1,10 +1,14 @@
-﻿google-api-python-client
-matplotlib
-networkx
-nltk
-numpy
-pandas
-scikit-learn
-tqdm
-torch
-transformers
+﻿# Python 3.12 recommended.
+# CUDA-enabled PyTorch wheels are used so RoBERTa can run on an NVIDIA GPU.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+google-api-python-client==2.196.0
+matplotlib==3.10.9
+networkx==3.6.1
+nltk==3.9.4
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.8.0
+torch==2.11.0+cu128
+tqdm==4.67.3
+transformers==5.9.0
