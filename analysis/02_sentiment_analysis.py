@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -12,6 +13,8 @@ from src.config import COMBINED_CLEAN, FIGURES_DIR, TABLES_DIR, SENTIMENT_METHOD
 
 CACHE_DIR = Path(__file__).resolve().parents[1] / "cache"
 SENTIMENT_CACHE = CACHE_DIR / f"{SENTIMENT_METHOD}_sentiment_cache.pkl"
+ROBERTA_BATCH_SIZE = int(os.getenv("ROBERTA_BATCH_SIZE", "64"))
+ROBERTA_MAX_LENGTH = int(os.getenv("ROBERTA_MAX_LENGTH", "256"))
 
 VADER_OUTPUT_COLS = [
     "sentiment_method",
@@ -148,7 +151,7 @@ def load_roberta():
         model=model,
         tokenizer=tokenizer,
         truncation=True,
-        max_length=512,
+        max_length=ROBERTA_MAX_LENGTH,
         device=device,
     )
 
@@ -174,11 +177,13 @@ def append_to_cache(cache, new_rows):
     return updated_cache
 
 
-def apply_roberta_to_uncached(df, cache, batch_size=32):
+def apply_roberta_to_uncached(df, cache, batch_size=ROBERTA_BATCH_SIZE):
     classifier = load_roberta()
     texts = df["textClean"].fillna("").astype(str).tolist()
     labelled_batches = []
     running_cache = cache
+    print(f"RoBERTa batch size: {batch_size}")
+    print(f"RoBERTa max token length: {ROBERTA_MAX_LENGTH}")
 
     for start in tqdm(range(0, len(texts), batch_size), desc="RoBERTa sentiment"):
         batch = texts[start:start + batch_size]
@@ -272,7 +277,7 @@ def plot_stacked_pct(table, index_col, title, output_path):
     ax = plot_df.plot(
         kind="bar",
         stacked=True,
-        color=["#2f9e44", "#868e96", "#c92a2a"],
+        color=["#2ca02c", "#868e96", "#da1010"],
         figsize=(10, 5),
     )
     ax.set_ylabel("Comments (%)")

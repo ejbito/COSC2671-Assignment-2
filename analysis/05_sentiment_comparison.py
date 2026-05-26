@@ -1,7 +1,10 @@
 from pathlib import Path
 import sys
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
@@ -20,14 +23,14 @@ TABLES_DIR = COMPARISON_DIR / "tables"
 
 SENTIMENT_ORDER = ["Positive", "Neutral", "Negative"]
 SENTIMENT_COLORS = {
-    "Positive": "#2f9e44",
+    "Positive": "#2ca02c",
     "Neutral": "#868e96",
-    "Negative": "#c92a2a",
+    "Negative": "#da1010",
 }
 SENTIMENT_HATCHES = {
-    "Positive": ".",
+    "Positive": "",
     "Neutral": "",
-    "Negative": "//",
+    "Negative": "",
 }
 MODEL_LINE_STYLES = {
     "VADER": ":",
@@ -199,6 +202,31 @@ def build_monthly_table(df):
     return table
 
 
+def build_quarterly_table(df):
+    valid = df[df["publishedAt"].notna()].copy()
+    if valid.empty:
+        table = pd.DataFrame(columns=["quarter", "sentiment", "count", "model"])
+        table.to_csv(TABLES_DIR / "quarterly_sentiment_counts_by_model.csv", index=False)
+        return table
+
+    valid["quarter"] = valid["publishedAt"].dt.to_period("Q").astype(str)
+    rows = []
+    for model_name, col in [("VADER", "vader_label_final"), ("RoBERTa", "roberta_label_final")]:
+        quarterly = (
+            valid.groupby(["quarter", col])
+            .size()
+            .reset_index(name="count")
+            .rename(columns={col: "sentiment"})
+        )
+        quarterly["model"] = model_name
+        rows.append(quarterly)
+    table = pd.concat(rows, ignore_index=True)
+    table["sentiment"] = pd.Categorical(table["sentiment"], SENTIMENT_ORDER, ordered=True)
+    table = table.sort_values(["model", "quarter", "sentiment"])
+    table.to_csv(TABLES_DIR / "quarterly_sentiment_counts_by_model.csv", index=False)
+    return table
+
+
 def plot_overall_distribution(table):
     plot_data = {
         model: (
@@ -307,8 +335,10 @@ def plot_monthly_lines(monthly_table):
             .reindex(columns=SENTIMENT_ORDER, fill_value=0)
             .sort_index()
         )
+        if not pivoted[model].empty:
+            pivoted[model].index = pd.to_datetime(pivoted[model].index, format="%Y-%m")
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4), sharey=False)
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.5), sharey=False)
     for ax, sentiment in zip(axes, SENTIMENT_ORDER):
         for model in ["VADER", "RoBERTa"]:
             if pivoted[model].empty:
@@ -325,11 +355,57 @@ def plot_monthly_lines(monthly_table):
         ax.set_xlabel("Month")
         ax.set_ylabel("Comments")
         ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.6)
-        ax.tick_params(axis="x", rotation=45)
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(interval=3))
+        ax.tick_params(axis="x", rotation=0)
         ax.legend()
 
     plt.tight_layout()
     fig.savefig(FIGURES_DIR / "monthly_sentiment_trends_by_model.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_quarterly_lines(quarterly_table):
+    if quarterly_table.empty:
+        return
+    pivoted = {}
+    for model in ["VADER", "RoBERTa"]:
+        model_table = quarterly_table[quarterly_table["model"].eq(model)]
+        pivot = (
+            model_table.pivot_table(index="quarter", columns="sentiment", values="count", aggfunc="sum", fill_value=0)
+            .reindex(columns=SENTIMENT_ORDER, fill_value=0)
+            .sort_index()
+        )
+        if not pivot.empty:
+            pivot.index = pd.PeriodIndex(pivot.index, freq="Q").to_timestamp()
+        pivoted[model] = pivot
+
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.5), sharey=False)
+    for ax, sentiment in zip(axes, SENTIMENT_ORDER):
+        for model in ["VADER", "RoBERTa"]:
+            if pivoted[model].empty:
+                continue
+            ax.plot(
+                pivoted[model].index,
+                pivoted[model][sentiment],
+                marker="o",
+                markersize=3,
+                linewidth=2.0,
+                linestyle=MODEL_LINE_STYLES[model],
+                label=model,
+            )
+        ax.set_title(f"{sentiment} Comments by Quarter")
+        ax.set_xlabel("Year")
+        ax.set_ylabel("Comments")
+        ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.6)
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        ax.tick_params(axis="x", rotation=0)
+        ax.legend()
+
+    plt.tight_layout()
+    fig.savefig(FIGURES_DIR / "quarterly_sentiment_trends_by_model.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -415,11 +491,13 @@ def main():
     game_table = build_game_distribution_table(merged)
     crosstab, agreement = build_agreement_tables(merged)
     monthly_table = build_monthly_table(merged)
+    quarterly_table = build_quarterly_table(merged)
     disagreement_examples = export_disagreement_examples(merged)
 
     plot_overall_distribution(overall_table)
     plot_game_distribution(game_table)
     plot_monthly_lines(monthly_table)
+    plot_quarterly_lines(quarterly_table)
     plot_crosstab_heatmap(crosstab)
     plot_agreement_by_game(agreement)
 

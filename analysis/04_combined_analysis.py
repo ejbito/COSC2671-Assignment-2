@@ -43,7 +43,7 @@ def plot_stacked_pct(table, label_col, title, output_path):
     ax = plot_df.plot(
         kind="bar",
         stacked=True,
-        color=["#2f9e44", "#868e96", "#c92a2a"],
+        color=["#2ca02c", "#868e96", "#da1010"],
         figsize=(10, 5),
     )
     ax.set_ylabel("Comments (%)")
