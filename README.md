@@ -25,7 +25,7 @@ analysis/
 |-- 02_sentiment_analysis.py
 |-- 03_network_analysis.py
 |-- 04_combined_analysis.py
-`-- sentiment_comparison.py
+`-- 05_sentiment_comparison.py
 
 cache/
 |-- vader_sentiment_cache.pkl
@@ -48,6 +48,9 @@ src/
 |-- config.py
 |-- fetchYoutubeData.py
 `-- youtubeClient.py
+
+utils/
+`-- create_sample_data.py
 
 pipeline.py
 requirements.txt
@@ -88,7 +91,9 @@ python -m pip install -r requirements.txt
 python -m nltk.downloader vader_lexicon
 ```
 
-If PyTorch fails with a `torch_python.dll` error, reinstall the CPU wheel:
+The included `requirements.txt` installs CUDA-enabled PyTorch wheels for NVIDIA GPU acceleration. This is recommended for the RoBERTa pipeline.
+
+If PyTorch fails with a `torch_python.dll` error and you do not need GPU support, reinstall the CPU wheel:
 
 ```powershell
 python -m pip uninstall -y torch torchvision torchaudio
@@ -145,6 +150,14 @@ RoBERTa run:
 python pipeline.py --roberta
 ```
 
+Faster RoBERTa run with larger batches and shorter token truncation:
+
+```powershell
+python pipeline.py --roberta --roberta-batch-size 64 --roberta-max-length 256
+```
+
+If your machine has enough RAM/VRAM, try `--roberta-batch-size 128`. If it crashes or slows down, use `64` or `32`.
+
 Output directories are separated by sentiment method:
 
 ```text
@@ -178,7 +191,7 @@ If CUDA is available, RoBERTa automatically uses GPU. Otherwise it uses CPU.
 After both pipelines complete:
 
 ```powershell
-python analysis/sentiment_comparison.py
+python analysis/05_sentiment_comparison.py
 ```
 
 This reads:
@@ -195,7 +208,25 @@ data/sentiment_comparison/tables/
 data/sentiment_comparison/figures/
 ```
 
-The comparison script produces distribution plots, model agreement tables, a VADER vs RoBERTa heatmap, monthly trend lines, and disagreement examples.
+The comparison script produces distribution plots, model agreement tables, a VADER vs RoBERTa heatmap, monthly and quarterly trend lines, and disagreement examples.
+
+## Create Assignment Sample Data
+
+The assignment asks for a representative sample of the data, no more than 10 MB, sufficient to show the structure used for network and NLP/text analysis.
+
+After running the analysis, create the sample package:
+
+```powershell
+python utils/create_sample_data.py
+```
+
+This writes:
+
+```text
+sample_data/
+```
+
+The sample package includes compact raw JSON samples, processed comment samples, edge-list samples, summary tables, a manifest, and a README. It is intentionally small and does not include caches, API keys, credentials, or full datasets.
 
 ## Main Outputs
 
